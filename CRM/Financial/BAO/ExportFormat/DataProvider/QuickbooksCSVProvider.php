@@ -72,6 +72,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProvider {
    */
   public static function formatDataRows($exportResultDao) {
     $prefixValue = Civi::settings()->get('contribution_invoice_settings');
+    $financialAccountsOwners = self::getAllFinancialAccountsOwnersIdNameMapping();
 
     $financialItems = $queryResults = [];
 
@@ -99,7 +100,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProvider {
         'Credits' => '',
         'Description' => $exportResultDao->item_description,
         'Name' => $exportResultDao->contact_id,
-        'Location' => $exportResultDao->to_account_contact_id,
+        'Location' => $financialAccountsOwners[$exportResultDao->to_account_contact_id],
         'Class' => $financialTypeName,
       ];
       $financialItems[] = $debitRow;
@@ -114,7 +115,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProvider {
         'Credits' => $exportResultDao->amount,
         'Description' => $exportResultDao->item_description,
         'Name' => $exportResultDao->contact_id,
-        'Location' => $creditAccountContactId,
+        'Location' => $financialAccountsOwners[$creditAccountContactId],
         'Class' => $financialTypeName,
       ];
       $financialItems[] = $creditRow;
@@ -124,6 +125,35 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProvider {
     }
 
     return [$queryResults, $financialItems];
+  }
+
+  /**
+   * Gets all the financial account owners id to name
+   * mapping, getting the list here is better than the
+   * alternative which is to do join on the whole contact table twice
+   * in runExportQuery() method above, the reason is we use it to
+   * get the account owner name for the "Location" column,
+   * which might differ between debit and credit rows.
+   *
+   * @return array
+   */
+  private static function getAllFinancialAccountsOwnersIdNameMapping() {
+    $sql = "SELECT cc.id as contact_id, cc.display_name, cc.sort_name
+      FROM civicrm_financial_account fa
+      INNER JOIN civicrm_contact cc ON fa.contact_id = cc.id";
+    $dao = CRM_Core_DAO::executeQuery($sql);
+
+    $contactIdNameMapping = [];
+    while ($dao->fetch()) {
+      if (!empty($dao->display_name)) {
+        $contactIdNameMapping[$dao->contact_id] = $dao->display_name;
+      }
+      else {
+        $contactIdNameMapping[$dao->contact_id] = $dao->sort_name;
+      }
+    }
+
+    return $contactIdNameMapping;
   }
 
 }

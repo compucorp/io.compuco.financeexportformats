@@ -55,14 +55,13 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProviderTest exte
     $this->assertEquals($data['batch_rows'][1]['Name'], $data['contribution_data']['contact_id']);
   }
 
-  public function testLocationColumnEqualsFinancialAccountOwnerId() {
+  public function testLocationColumnEqualsFinancialAccountOwnerName() {
     $data = $this->createTestContributionAndGenerateBatchRows();
 
     // All existing financial Account on Civi demo database are owned
     // by the "Default organization".
-    $financialAccountOwnerId = 1;
-    $this->assertEquals($data['batch_rows'][0]['Location'], $financialAccountOwnerId);
-    $this->assertEquals($data['batch_rows'][1]['Location'], $financialAccountOwnerId);
+    $this->assertEquals($data['batch_rows'][0]['Location'], 'Default Organization');
+    $this->assertEquals($data['batch_rows'][1]['Location'], 'Default Organization');
   }
 
   public function testClassColumnEqualsFinancialTypeName() {
