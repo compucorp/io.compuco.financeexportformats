@@ -137,3 +137,10 @@ function financeexportformats_civicrm_entityTypes(&$entityTypes) {
 function financeexportformats_civicrm_themes(&$themes) {
   _financeexportformats_civix_civicrm_themes($themes);
 }
+
+function financeexportformats_civicrm_buildForm($formName, &$form) {
+  if ($formName == 'CRM_Financial_Form_Export') {
+    $hook = new CRM_Financeexportformats_Hook_BuildForm_FinancialBatchExport($form);
+    $hook->run();
+  }
+}
