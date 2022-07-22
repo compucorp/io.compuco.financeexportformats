@@ -14,7 +14,7 @@ class CRM_Financeexportformats_Hook_BuildForm_FinancialBatchExport {
     $this->form = $form;
   }
 
-  public function run(){
+  public function run() {
     $this->addExtraExportFormats();
   }
 
@@ -26,22 +26,22 @@ class CRM_Financeexportformats_Hook_BuildForm_FinancialBatchExport {
     // These options are the default export options provided
     // by CiviCRM core.
     $civiCoreOptions = [
-        'IIF' => ts('Export to IIF'),
-        'CSV' => ts('Export to CSV'),
-      ];
+      'IIF' => ts('Export to IIF'),
+      'CSV' => ts('Export to CSV'),
+    ];
 
-      // These are the options we are adding/supporting
-      // in this extension
-      $extensionAddedOptions = [
-        'QuickbooksCSV' => ts('Quickbooks Online journal import CSV'),
-      ];
+    // These are the options we are adding/supporting
+    // in this extension
+    $extensionAddedOptions = [
+      'QuickbooksCSV' => ts('Quickbooks Online journal import CSV'),
+    ];
 
-      $allOptions = array_merge($civiCoreOptions, $extensionAddedOptions);
+    $allOptions = array_merge($civiCoreOptions, $extensionAddedOptions);
 
-      // Here we override the existing export format radio field options
-      // with the all the available options (both CiviCRM core ones and the ones
-      // added by this extension).
-      $this->form->addRadio('export_format', NULL, $allOptions, NULL, '<br/>', TRUE);
+    // Here we override the existing export format radio field options
+    // with the all the available options (both CiviCRM core ones and the ones
+    // added by this extension).
+    $this->form->addRadio('export_format', NULL, $allOptions, NULL, '<br/>', TRUE);
   }
 
 }

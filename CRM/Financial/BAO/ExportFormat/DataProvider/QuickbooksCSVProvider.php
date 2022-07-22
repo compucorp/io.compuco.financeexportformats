@@ -66,10 +66,9 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProvider {
    * @param $exportResultDao
    *
    * @return array
-   *  Returns two arrays, one contains only the query results without
-   * formatting, and another with the formatted data. This is needed
-   * CRM_Utils_Hook::batchItems hook.
-   *
+   *   Returns two arrays, one contains only the query results without
+   *   formatting, and another with the formatted data. This is needed
+   *   CRM_Utils_Hook::batchItems hook.
    */
   public static function formatDataRows($exportResultDao) {
     $prefixValue = Civi::settings()->get('contribution_invoice_settings');

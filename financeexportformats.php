@@ -2,8 +2,6 @@
 
 require_once 'financeexportformats.civix.php';
 
-use CRM_Financeexportformats_ExtensionUtil as ExtensionUtil;
-
 /**
  * Implements hook_civicrm_config().
  *
