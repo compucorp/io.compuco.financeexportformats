@@ -20,7 +20,7 @@ class CRM_Financial_BAO_ExportFormat_QuickbooksCSV extends CRM_Financial_BAO_Exp
     $export = parent::export($exportParams);
 
     // Save the file in the public directory.
-    $fileName = self::putFile($export);
+    $fileName = $this->putFile($export);
 
     $this->output($fileName);
   }
@@ -78,8 +78,8 @@ class CRM_Financial_BAO_ExportFormat_QuickbooksCSV extends CRM_Financial_BAO_Exp
 
       CRM_Utils_Hook::batchItems($queryResults, $financialItems);
 
-      $financialItems['headers'] = self::formatHeaders($financialItems);
-      self::export($financialItems);
+      $financialItems['headers'] = $this->formatHeaders($financialItems);
+      $this->export($financialItems);
     }
 
     parent::initiateDownload();

@@ -88,7 +88,10 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProvider {
 
       $invoiceNo = CRM_Utils_Array::value('invoice_prefix', $prefixValue) . "" . $exportResultDao->contribution_id;
 
-      $financialTypeName = CRM_Core_DAO::getFieldValue('CRM_Financial_DAO_FinancialType', $exportResultDao->financial_type_id);
+      $financialTypeName = '';
+      if (property_exists($exportResultDao, 'financial_type_id') && !empty($exportResultDao->financial_type_id)) {
+        $financialTypeName = CRM_Core_DAO::getFieldValue('CRM_Financial_DAO_FinancialType', $exportResultDao->financial_type_id);
+      }
 
       $debitRow = [
         '*JournalNo' => $exportResultDao->financial_trxn_id,
