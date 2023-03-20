@@ -48,11 +48,13 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProviderTest exte
     $this->assertEquals($data['batch_rows'][1]['Memo'], $invoiceNumber);
   }
 
-  public function testNameColumnEqualsContactId() {
+  public function testNameColumnEqualsContactDisplayNamePlusContactId() {
     $data = $this->createTestContributionAndGenerateBatchRows();
 
-    $this->assertEquals($data['batch_rows'][0]['Name'], $data['contribution_data']['contact_id']);
-    $this->assertEquals($data['batch_rows'][1]['Name'], $data['contribution_data']['contact_id']);
+    $exportName = $data['contribution_data']['contact_id'] . ' ' . $data['contribution_data']['contact_name'];
+
+    $this->assertEquals($data['batch_rows'][0]['Name'], $exportName);
+    $this->assertEquals($data['batch_rows'][1]['Name'], $exportName);
   }
 
   public function testLocationColumnEqualsFinancialAccountOwnerName() {
@@ -159,6 +161,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProviderTest exte
 
     return [
       'contact_id' => $contactId,
+      'contact_name' => $randomName . ' cc',
       'contribution_id' => $contribution['id'],
       'financial_trxn_id' => $financialTrxnId,
       'batch_id' => $batchId,

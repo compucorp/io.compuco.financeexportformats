@@ -24,6 +24,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProvider {
       c.source AS source,
       c.id AS contribution_id,
       c.contact_id AS contact_id,
+      con.display_name AS display_name,
       c.financial_type_id AS financial_type_id,
       ft.currency AS currency,
       CASE
@@ -43,6 +44,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProvider {
       LEFT JOIN civicrm_financial_account fa_from ON fa_from.id = ft.from_financial_account_id
       LEFT JOIN civicrm_entity_financial_trxn eftc ON (eftc.financial_trxn_id  = ft.id AND eftc.entity_table = 'civicrm_contribution')
       LEFT JOIN civicrm_contribution c ON c.id = eftc.entity_id
+      LEFT JOIN civicrm_contact con ON con.id = c.contact_id
       LEFT JOIN civicrm_entity_financial_trxn efti ON (efti.financial_trxn_id  = ft.id AND efti.entity_table = 'civicrm_financial_item')
       LEFT JOIN civicrm_financial_item fi ON fi.id = efti.entity_id
       LEFT JOIN civicrm_financial_account fac ON fac.id = fi.financial_account_id
@@ -102,7 +104,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProvider {
         'Debits' => $exportResultDao->amount,
         'Credits' => '',
         'Description' => $exportResultDao->item_description,
-        'Name' => $exportResultDao->contact_id,
+        'Name' => $exportResultDao->contact_id . ' ' . $exportResultDao->display_name,
         'Location' => $financialAccountsOwners[$exportResultDao->to_account_contact_id],
         'Class' => $financialTypeName,
       ];
@@ -117,7 +119,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProvider {
         'Debits' => '',
         'Credits' => $exportResultDao->amount,
         'Description' => $exportResultDao->item_description,
-        'Name' => $exportResultDao->contact_id,
+        'Name' => $exportResultDao->contact_id . ' ' . $exportResultDao->display_name,
         'Location' => $financialAccountsOwners[$creditAccountContactId],
         'Class' => $financialTypeName,
       ];
