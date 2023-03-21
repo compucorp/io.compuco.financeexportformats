@@ -142,3 +142,10 @@ function financeexportformats_civicrm_buildForm($formName, &$form) {
     $hook->run();
   }
 }
+
+function financeexportformats_civicrm_alterContent(&$content, $context, $tplName, &$object) {
+  if ($tplName == "CRM/Financial/Page/Batch.tpl") {
+    $hook = new CRM_Financeexportformats_Hook_AlterContent_FinancialBatchPage($content);
+    $hook->run();
+  }
+}
