@@ -15,12 +15,32 @@ class CRM_Financeexportformats_Hook_BuildForm_FinancialBatchExport {
   }
 
   public function run() {
+    $this->processQuickbooksFormatFromExportModalContext();
     $this->addExtraExportFormats();
   }
 
   /**
-   * Adds extra financial batch export formats
-   * to the exisitng core ones.
+   * CiviCRM versions < 5.39.1 has two ways to export batches, one of them
+   * shows the export formats in a separate form, while the other shows them
+   * in a Modal window, this adds Quickbooks format support to the Modal
+   * window, and allow it to be processed from such context.
+   */
+  private function processQuickbooksFormatFromExportModalContext() {
+    $selectedExportFormat = CRM_Utils_Request::retrieve('export_format', 'String');
+    if (empty($selectedExportFormat)
+      || !in_array($selectedExportFormat, ['IIF', 'CSV', 'QuickbooksCSV'])
+    ) {
+      return;
+    }
+
+    $reflection = new \ReflectionProperty(get_class($this->form), '_exportFormat');
+    $reflection->setAccessible(TRUE);
+    $reflection->setValue($this->form, $selectedExportFormat);
+    $this->form->postProcess();
+  }
+
+  /**
+   * Adds extra financial batch export formats to the exisitng core ones.
    */
   private function addExtraExportFormats() {
     // These options are the default export options provided
@@ -31,7 +51,7 @@ class CRM_Financeexportformats_Hook_BuildForm_FinancialBatchExport {
     ];
 
     // These are the options we are adding/supporting
-    // in this extension
+    // in this extension.
     $extensionAddedOptions = [
       'QuickbooksCSV' => ts('Quickbooks Online journal import CSV'),
     ];
