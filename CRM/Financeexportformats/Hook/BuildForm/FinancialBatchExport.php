@@ -22,13 +22,13 @@ class CRM_Financeexportformats_Hook_BuildForm_FinancialBatchExport {
   /**
    * CiviCRM versions < 5.39.1 has two ways to export batches, one of them
    * shows the export formats in a separate form, while the other shows them
-   * in a Modal window, this adds Quickbooks format support to the Modal
+   * in a Modal window, this adds Quickbooks, Sage50 formats support to the Modal
    * window, and allow it to be processed from such context.
    */
   private function processQuickbooksFormatFromExportModalContext() {
     $selectedExportFormat = CRM_Utils_Request::retrieve('export_format', 'String');
     if (empty($selectedExportFormat)
-      || !in_array($selectedExportFormat, ['IIF', 'CSV', 'QuickbooksCSV'])
+      || !in_array($selectedExportFormat, ['IIF', 'CSV', 'QuickbooksCSV', 'Sage50CSV'])
     ) {
       return;
     }
@@ -40,7 +40,7 @@ class CRM_Financeexportformats_Hook_BuildForm_FinancialBatchExport {
   }
 
   /**
-   * Adds extra financial batch export formats to the exisitng core ones.
+   * Adds extra financial batch export formats to the existing core ones.
    */
   private function addExtraExportFormats() {
     // These options are the default export options provided
@@ -54,6 +54,7 @@ class CRM_Financeexportformats_Hook_BuildForm_FinancialBatchExport {
     // in this extension.
     $extensionAddedOptions = [
       'QuickbooksCSV' => ts('Quickbooks Online journal import CSV'),
+      'Sage50CSV' => ts('Export to Invoice lines and Payments (Sage50) CSV'),
     ];
 
     $allOptions = array_merge($civiCoreOptions, $extensionAddedOptions);
