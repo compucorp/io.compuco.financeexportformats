@@ -7,7 +7,7 @@ use CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider as Sage50CSVPr
  */
 class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProviderTest extends BaseHeadlessTest {
 
-  public function setup() {
+  public function setup(): void {
     $this->setContributionSettings();
   }
 
