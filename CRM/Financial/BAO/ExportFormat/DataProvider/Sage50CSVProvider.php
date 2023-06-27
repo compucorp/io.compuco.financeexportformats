@@ -20,6 +20,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
 
   private $financialTypeTaxCodeMap;
   private $invoicePrefixValue;
+  private $fromCreditAccountTaxMap;
 
   public function __construct() {
     $this->invoicePrefixValue = Civi::settings()->get('contribution_invoice_settings');
@@ -104,6 +105,11 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
         self::COST_CODE_REFN_LABEL => NULL,
       ];
 
+      // Ignore tax line item
+      if ($this->isFromCreditAccountTaxAccount($exportResultDao->from_credit_account)) {
+        continue;
+      }
+
       if ($exportResultDao->is_payment == 0) {
         $formattedItem = $this->formatFinancialItemLines($item, $exportResultDao);
         if (is_null($formattedItem)) {
@@ -171,6 +177,35 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     $this->financialTypeTaxCodeMap[$financialTypeID] = $taxCode;
 
     return $taxCode;
+  }
+
+  /**
+   * Checks if account code is a tax account.
+   */
+  private function isFromCreditAccountTaxAccount($accountCode) {
+    if (isset($this->fromCreditAccountTaxMap[$accountCode])) {
+      //return value if we have visited it before.
+      return $this->fromCreditAccountTaxMap[$accountCode];
+    }
+
+    $fa = civicrm_api3('FinancialAccount', 'get', [
+      'sequential' => 1,
+      'accounting_code' => $accountCode,
+    ]);
+
+    if ($fa['count'] == 0) {
+      return FALSE;
+    }
+
+    if ($fa['values'][0]['is_tax'] == TRUE) {
+      $this->fromCreditAccountTaxMap[$accountCode] = TRUE;
+
+      return TRUE;
+    }
+
+    $this->fromCreditAccountTaxMap[$accountCode] = FALSE;
+
+    return FALSE;
   }
 
 }

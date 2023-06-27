@@ -72,6 +72,19 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProviderTest extends 
     $this->assertEquals('SC', $row[Sage50CSVProvider::TYPE_LABEL]);
   }
 
+  public function testRemoveTaxLineItems() {
+    $this->mockSalesTaxFinancialAccount();
+    $contributionData = $this->mockContributionInBatch(120);
+
+    $exportResultDao = Sage50CSVProvider::runExportQuery($contributionData['batch_id']);
+    $provider = new Sage50CSVProvider();
+
+    list($queryResults, $rows) = $provider->formatDataRows($exportResultDao);
+
+    $this->assertEquals(2, count($queryResults));
+    $this->assertEquals(1, count($rows));
+  }
+
   /**
    * Sets CiviContribute settings.
    */
