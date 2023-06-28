@@ -18,8 +18,8 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
         PROJECT_REFN_LABEL = 'Project Refn',
         COST_CODE_REFN_LABEL = 'Cost Code Refn';
 
-  private $financialTypeTaxCodeMap;
   private $invoicePrefixValue;
+  private $financialTypeTaxCodeMap;
   private $fromCreditAccountTaxMap;
 
   public function __construct() {
@@ -38,11 +38,17 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
       c.id as contribution_id,
       con.display_name as contact_display_name,
       c.invoice_number,
+      fa_to.accounting_code AS to_account_code,
+      fa_to.name AS to_account_name,
+      fa_to.account_type_code AS to_account_type_code,
       ft.id as financial_trxn_id,
       ft.trxn_date,
       ft.is_payment,
       ft.total_amount AS debit_total_amount,
       ft.trxn_id AS trxn_id,
+      cov.label AS payment_method,
+      ft.payment_processor_id,
+      pp.name as payment_processor_name,
       CASE
         WHEN efti.entity_id IS NOT NULL
         THEN efti.amount
@@ -61,7 +67,11 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
       li.financial_type_id as line_item_financial_type_id
     FROM civicrm_entity_batch eb
              LEFT JOIN civicrm_financial_trxn ft ON (eb.entity_id = ft.id AND eb.entity_table = 'civicrm_financial_trxn')
+             LEFT JOIN civicrm_payment_processor pp ON (ft.payment_processor_id = pp.id)
+             LEFT JOIN civicrm_financial_account fa_to ON fa_to.id = ft.to_financial_account_id
              LEFT JOIN civicrm_financial_account fa_from ON fa_from.id = ft.from_financial_account_id
+             LEFT JOIN civicrm_option_group cog ON cog.name = 'payment_instrument'
+             LEFT JOIN civicrm_option_value cov ON (cov.value = ft.payment_instrument_id AND cov.option_group_id = cog.id)
              LEFT JOIN civicrm_entity_financial_trxn eftc ON (eftc.financial_trxn_id  = ft.id AND eftc.entity_table = 'civicrm_contribution')
              LEFT JOIN civicrm_contribution c ON c.id = eftc.entity_id
              LEFT JOIN civicrm_contact con on con.id = c.contact_id
@@ -87,6 +97,8 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
   public function formatDataRows($exportResultDao) {
     $financialItems = $queryResults = [];
     while ($exportResultDao->fetch()) {
+      $queryResults[] = get_object_vars($exportResultDao);
+
       $item = [
         self::TYPE_LABEL => NULL,
         self::ACCOUNT_REFERENCE_LABEL => 'CiviCRM',
@@ -110,20 +122,43 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
         continue;
       }
 
+      $formattedItem = NULL;
       if ($exportResultDao->is_payment == 0) {
         $formattedItem = $this->formatFinancialItemLines($item, $exportResultDao);
         if (is_null($formattedItem)) {
           continue;
         }
-
-        $financialItems[] = $formattedItem;
+      }
+      else {
+        $formattedItem = $this->formatPaymentItemLines($item, $exportResultDao);
+        if (is_null($formattedItem)) {
+          continue;
+        }
       }
 
+      $financialItems[] = $formattedItem;
       end($financialItems);
-      $queryResults[] = get_object_vars($exportResultDao);
     }
 
     return [$queryResults, $financialItems];
+  }
+
+  private function formatPaymentItemLines(array $item, $exportResultDao) {
+    if ($exportResultDao->amount >= 0) {
+      $item[self::TYPE_LABEL] = 'SA';
+    }
+    else {
+      $item[self::TYPE_LABEL] = 'SP';
+    }
+
+    $item[self::NOMINAL_AC_REF_LABEL] = $exportResultDao->to_account_code;
+    $paymentMethod = is_null($exportResultDao->payment_processor_id) ? $exportResultDao->payment_method : $exportResultDao->payment_processor_name;
+    $item[self::DETAILS_LABEL] = "$paymentMethod - $exportResultDao->trxn_id";
+    $item[self::NET_AMOUNT_LABEL] = $exportResultDao->debit_total_amount;
+    $item[self::TAX_CODE_LABEL] = $exportResultDao->to_account_type_code;
+    $item[self::EXTRA_REFERENCE] = $exportResultDao->civicrm_entity_financial_trxn_id;
+
+    return $item;
   }
 
   private function formatFinancialItemLines(array $item, $exportResultDao) {
@@ -197,7 +232,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
       return FALSE;
     }
 
-    if ($fa['values'][0]['is_tax'] == TRUE) {
+    if ($fa['values'][0]['is_tax']) {
       $this->fromCreditAccountTaxMap[$accountCode] = TRUE;
 
       return TRUE;

@@ -64,11 +64,11 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProviderTest extends 
     $exportResultDao = Sage50CSVProvider::runExportQuery($contributionData['batch_id']);
     $provider = new Sage50CSVProvider();
     list($queryResults, $rows) = $provider->formatDataRows($exportResultDao);
-
     $row = $rows[0];
     $this->assertEquals('SI', $row[Sage50CSVProvider::TYPE_LABEL]);
 
-    $row = $rows[1];
+    // Test row 3 here as row 2 is a payment line.
+    $row = $rows[2];
     $this->assertEquals('SC', $row[Sage50CSVProvider::TYPE_LABEL]);
   }
 
@@ -80,9 +80,62 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProviderTest extends 
     $provider = new Sage50CSVProvider();
 
     list($queryResults, $rows) = $provider->formatDataRows($exportResultDao);
+    $this->assertEquals(4, count($queryResults));
+    $this->assertEquals(2, count($rows));
+  }
 
-    $this->assertEquals(2, count($queryResults));
-    $this->assertEquals(1, count($rows));
+  public function testPaymentProcessorLine() {
+    $contributionData = $this->mockContributionInBatch(100, TRUE);
+    $exportResultDao = Sage50CSVProvider::runExportQuery($contributionData['batch_id']);
+    $provider = new Sage50CSVProvider();
+
+    list($queryResults, $rows) = $provider->formatDataRows($exportResultDao);
+
+    $this->assertEquals(0, $queryResults[0]['is_payment']);
+    $this->assertEquals(1, $queryResults[1]['is_payment']);
+
+    $queryResult = $queryResults[1];
+    $row = $rows[1];
+    $contribution = $this->getContributionByID($contributionData['contribution_id']);
+
+    $this->assertEquals('SA', $row[Sage50CSVProvider::TYPE_LABEL]);
+    $this->assertEquals('CiviCRM', $row[Sage50CSVProvider::ACCOUNT_REFERENCE_LABEL]);
+    $this->assertEquals($queryResult['to_account_code'], $row[Sage50CSVProvider::NOMINAL_AC_REF_LABEL]);
+    $this->assertEquals(NULL, $row[Sage50CSVProvider::DEPARTMENT_CODE_LABEL]);
+    $this->assertEquals('01/06/2023', $row[Sage50CSVProvider::DATE_LABEL]);
+    $this->assertEquals($contribution['invoice_number'], $row[Sage50CSVProvider::REFERENCE_LABEL]);
+    $this->assertEquals($queryResult['payment_processor_name'] . ' - ' . $queryResult['trxn_id'], $row[Sage50CSVProvider::DETAILS_LABEL]);
+    $this->assertEquals(100, $row[Sage50CSVProvider::NET_AMOUNT_LABEL]);
+    $this->assertEquals($queryResult['to_account_type_code'], $row[Sage50CSVProvider::TAX_CODE_LABEL]);
+    $this->assertEquals(0, $row[Sage50CSVProvider::TAX_AMOUNT_LABEL]);
+  }
+
+  public function testPaymentProcessorRefundLine() {
+    $contributionData = $this->mockContributionInBatch(100, TRUE);
+    $this->mockRefundPaymentTransaction($contributionData);
+
+    $exportResultDao = Sage50CSVProvider::runExportQuery($contributionData['batch_id']);
+    $provider = new Sage50CSVProvider();
+
+    list($queryResults, $rows) = $provider->formatDataRows($exportResultDao);
+
+    $queryResult = $queryResults[2];
+    $row = $rows[2];
+    $this->assertEquals('SP', $row[Sage50CSVProvider::TYPE_LABEL]);
+    $this->assertEquals($queryResult['payment_processor_name'] . ' - ' . $queryResult['trxn_id'], $row[Sage50CSVProvider::DETAILS_LABEL]);
+    $this->assertEquals(-50, $row[Sage50CSVProvider::NET_AMOUNT_LABEL]);
+  }
+
+  public function testManuallyAddedPaymentLine() {
+    $contributionData = $this->mockContributionInBatch(120);
+    $exportResultDao = Sage50CSVProvider::runExportQuery($contributionData['batch_id']);
+    $provider = new Sage50CSVProvider();
+
+    list($queryResults, $rows) = $provider->formatDataRows($exportResultDao);
+    $queryResult = $queryResults[1];
+    $row = $rows[1];
+
+    $this->assertEquals($queryResult['payment_method'] . ' - ' . $queryResult['trxn_id'], $row[Sage50CSVProvider::DETAILS_LABEL]);
   }
 
   /**
@@ -133,12 +186,59 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProviderTest extends 
   }
 
   /**
+   * Mocks refund payment transaction with payment processor.
+   */
+  private function mockRefundPaymentTransaction($contributionData) {
+    $pp = civicrm_api3('PaymentProcessor', 'get', [
+      'sequential' => 1,
+      'is_test' => 0,
+    ]);
+
+    civicrm_api3('Payment', 'create', [
+      'contribution_id' => $contributionData['contribution_id'],
+      'total_amount' => -50,
+      'trxn_date' => '2023-06-01',
+      'payment_processor_id' => $pp['id'],
+      'trxn_id' => 'rf_123',
+      'payment_instrument_id' => 'Credit Card',
+    ]);
+
+    $entityBatch = civicrm_api3('EntityBatch', 'get', [
+      'sequential' => 1,
+      'return' => ["entity_id"],
+      'entity_table' => "civicrm_financial_trxn",
+      'batch_id' => $contributionData['batch_id'],
+    ])['values'];
+
+    $entityMap = [];
+    foreach ($entityBatch as $entity) {
+      $entityMap[$entity['entity_id']] = $entity['id'];
+    }
+
+    $financialTrxnIds = civicrm_api3('FinancialTrxn', 'get', [
+      'sequential' => 1,
+      'options' => ['sort' => 'id desc'],
+    ])['values'];
+
+    foreach ($financialTrxnIds as $fTrxn) {
+      if (array_key_exists($fTrxn['id'], $entityMap)) {
+        continue;
+      }
+      civicrm_api3('EntityBatch', 'create', [
+        'entity_id' => $fTrxn['id'],
+        'batch_id' => $contributionData['batch_id'],
+        'entity_table' => 'civicrm_financial_trxn',
+      ]);
+    }
+  }
+
+  /**
    * Creates financial transaction including payments and
    * add transactions to entity batch.
    *
    * @return array
    */
-  private function mockContributionInBatch($amount) {
+  private function mockContributionInBatch($amount, $shouldPayWithPaymentProcessor = FALSE) {
     $contact = civicrm_api3('Contact', 'create', [
       'contact_type' => 'Individual',
       'first_name' => 'John',
@@ -155,14 +255,28 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProviderTest extends 
       'is_pay_later' => TRUE,
     ]);
 
-    civicrm_api3('Payment', 'create', [
+    $paymentParams = [
       'contribution_id' => $order['id'],
       'total_amount' => $amount,
       'trxn_date' => '2023-06-01',
       'payment_instrument_id' => 'Credit Card',
-    //Test Payment Processor
-      'payment_processor' => 1,
-    ]);
+      'trxn_id' => 'trxn_123',
+    ];
+
+    if ($shouldPayWithPaymentProcessor) {
+      $result = civicrm_api3('PaymentProcessor', 'create', [
+        'payment_processor_type_id' => "Dummy",
+        'financial_account_id' => "Payment Processor Account",
+        'payment_instrument_id' => "Credit Card",
+        'is_active' => 1,
+        'name' => "Test Payment Processor",
+      ]);
+
+      $paymentParams['payment_processor_id'] = $result['id'];
+      $paymentParams['trxn_id'] = 'ch_xyz';
+    }
+
+    civicrm_api3('Payment', 'create', $paymentParams);
 
     $financialTrxnIds = civicrm_api3('FinancialTrxn', 'get', [
       'sequential' => 1,
