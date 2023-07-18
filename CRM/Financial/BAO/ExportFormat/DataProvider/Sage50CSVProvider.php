@@ -160,7 +160,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
   }
 
   private function formatPaymentItemLines(array $item, $exportResultDao) {
-    if ($exportResultDao->amount >= 0) {
+    if ($exportResultDao->debit_total_amount >= 0) {
       $item[self::TYPE_LABEL] = 'SA';
     }
     else {
