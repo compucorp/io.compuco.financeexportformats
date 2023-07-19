@@ -114,7 +114,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
         self::DETAILS_LABEL => NULL,
         self::NET_AMOUNT_LABEL => NULL,
         self::TAX_CODE_LABEL => NULL,
-        self::TAX_AMOUNT_LABEL => $exportResultDao->line_item_tax_amount,
+        self::TAX_AMOUNT_LABEL => NULL,
         self::EXCHANGE_RATE_LABEL => NULL,
         self::EXTRA_REFERENCE => $exportResultDao->civicrm_entity_financial_trxn_id,
         self::USER_NAME_LABEL => NULL,
@@ -192,6 +192,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     $item[self::NOMINAL_AC_REF_LABEL] = $exportResultDao->from_credit_account;
     $item[self::DETAILS_LABEL] = $exportResultDao->contact_display_name . ' - ' . $exportResultDao->item_description;
     $item[self::NET_AMOUNT_LABEL] = $exportResultDao->net_amount;
+    $item[self::TAX_AMOUNT_LABEL] = $exportResultDao->line_item_tax_amount;
     if (!is_null($exportResultDao->line_item_tax_amount)) {
       $item[self::TAX_CODE_LABEL] = $this->getFinancialIemLinesTaxCodeByFinancialID($exportResultDao->line_item_financial_type_id);
     }
