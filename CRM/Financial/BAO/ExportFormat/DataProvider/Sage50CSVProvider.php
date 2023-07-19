@@ -23,6 +23,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
   private $fromCreditAccountTaxMap;
   private $expensesFinancialTypeId;
   private $expensesFinancialAccounts;
+  private $paymentLineMap;
 
   public function __construct() {
     $this->invoicePrefixValue = Civi::settings()->get('contribution_invoice_settings');
@@ -30,6 +31,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     $this->fromCreditAccountTaxMap = [];
     $this->expensesFinancialTypeId = $this->getFinancialAccountTypeIdByName('Expenses');
     $this->expensesFinancialAccounts = [];
+    $this->paymentLineMap = [];
   }
 
   /**
@@ -130,6 +132,9 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
       $formattedItem = NULL;
       if ($exportResultDao->is_payment == 1) {
         $formattedItem = $this->formatPaymentItemLines($item, $exportResultDao);
+        if (is_null($formattedItem)) {
+          continue;
+        }
       }
       elseif ($this->isExpensesAccount($exportResultDao->to_account_code)) {
         $formattedItem = $this->formatPaymentProcessorFeeItemLines($item, $exportResultDao);
@@ -160,6 +165,10 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
   }
 
   private function formatPaymentItemLines(array $item, $exportResultDao) {
+    if (isset($this->paymentLineMap[$exportResultDao->civicrm_entity_financial_trxn_id])) {
+      return NULL;
+    }
+
     if ($exportResultDao->debit_total_amount >= 0) {
       $item[self::TYPE_LABEL] = 'SA';
     }
@@ -172,6 +181,8 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     $item[self::DETAILS_LABEL] = "$paymentMethod - $exportResultDao->trxn_id";
     $item[self::NET_AMOUNT_LABEL] = $exportResultDao->debit_total_amount;
     $item[self::TAX_CODE_LABEL] = $exportResultDao->to_account_type_code;
+
+    $this->paymentLineMap[$exportResultDao->civicrm_entity_financial_trxn_id] = TRUE;
 
     return $item;
   }
