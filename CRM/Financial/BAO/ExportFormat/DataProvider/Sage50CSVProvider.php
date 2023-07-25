@@ -203,10 +203,11 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     $item[self::NOMINAL_AC_REF_LABEL] = $exportResultDao->from_credit_account;
     $item[self::DETAILS_LABEL] = $exportResultDao->contact_display_name . ' - ' . $exportResultDao->item_description;
     $item[self::NET_AMOUNT_LABEL] = $exportResultDao->net_amount;
-    $item[self::TAX_AMOUNT_LABEL] = $exportResultDao->line_item_tax_amount;
     if (!is_null($exportResultDao->line_item_tax_amount)) {
       $item[self::TAX_CODE_LABEL] = $this->getFinancialIemLinesTaxCodeByFinancialID($exportResultDao->line_item_financial_type_id);
+      $item[self::TAX_AMOUNT_LABEL] = $this->calculateTaxAmount($exportResultDao->net_amount, $exportResultDao->line_item_financial_type_id);
     }
+
     return $item;
   }
 
@@ -238,6 +239,24 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     $this->financialTypeTaxCodeMap[$financialTypeID] = $taxCode;
 
     return $taxCode;
+  }
+
+  private function calculateTaxAmount($amount, $financialTypeID) {
+    $taxRate = $this->getTaxRateForFinancialType($financialTypeID);
+    $taxAmount = 0;
+    if (empty($taxRate)) {
+      return $taxAmount;
+    }
+
+    return ($taxRate / 100) * $amount;
+  }
+
+  private function getTaxRateForFinancialType($financialTypeID) {
+    $taxRates = CRM_Core_PseudoConstant::getTaxRates();
+    return round(
+      CRM_Utils_Array::value($financialTypeID, $taxRates, 0),
+      2
+    );
   }
 
   /**
