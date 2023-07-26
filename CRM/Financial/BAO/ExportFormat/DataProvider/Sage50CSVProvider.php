@@ -41,6 +41,8 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
    * @return CRM_Core_DAO
    */
   public static function runExportQuery($batchId) {
+    $taxAccounts = self::generatTaxAccountCondition();
+
     $sql = "SELECT
       c.id as contribution_id,
       con.display_name as contact_display_name,
@@ -68,9 +70,9 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
       fac.accounting_code AS from_credit_account,
       fac.name AS from_credit_account_name,
       fi.amount as net_amount,
+      fii.amount as tax_amount,
       eftc.id as civicrm_entity_financial_trxn_id,
       li.label as item_description,
-      li.tax_amount as line_item_tax_amount,
       li.financial_type_id as line_item_financial_type_id
     FROM civicrm_entity_batch eb
              LEFT JOIN civicrm_financial_trxn ft ON (eb.entity_id = ft.id AND eb.entity_table = 'civicrm_financial_trxn')
@@ -84,9 +86,14 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
              LEFT JOIN civicrm_contact con on con.id = c.contact_id
              LEFT JOIN civicrm_entity_financial_trxn efti ON (efti.financial_trxn_id  = ft.id AND efti.entity_table = 'civicrm_financial_item')
              LEFT JOIN civicrm_financial_item fi ON fi.id = efti.entity_id
+             LEFT JOIN civicrm_financial_item fii ON (fii.id = (SELECT eftii.entity_id
+                                                    FROM civicrm_entity_financial_trxn eftii
+                                                    WHERE eftii.financial_trxn_id  = ft.id
+                                                      AND eftii.entity_table = 'civicrm_financial_item'
+                                                      AND eftii.entity_id <> fi.id and ft.is_payment = 0) AND (fii.financial_account_id IN ($taxAccounts)))
              LEFT JOIN civicrm_line_item li ON (li.id = fi.entity_id AND fi.entity_table = 'civicrm_line_item')
              LEFT JOIN civicrm_financial_account fac ON fac.id = fi.financial_account_id
-    WHERE eb.batch_id = ( %1 )";
+    WHERE eb.batch_id = %1";
 
     CRM_Utils_Hook::batchQuery($sql);
 
@@ -94,6 +101,33 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     $dao = CRM_Core_DAO::executeQuery($sql, $params);
 
     return $dao;
+  }
+
+  /**
+   * Generates tax account condition for SQL statement.
+   *
+   * @return string
+   *
+   * @throws API_Exception
+   * @throws \Civi\API\Exception\UnauthorizedException
+   */
+  private static function generatTaxAccountCondition() {
+    $taxFinanceAccountsCondition = [];
+    $financialAccounts = \Civi\Api4\FinancialAccount::get()
+      ->addWhere('is_tax', '=', TRUE)
+      ->execute()
+      ->getArrayCopy();
+
+    foreach ($financialAccounts as $financialAccount) {
+      $taxFinanceAccountsCondition[] = $financialAccount['id'];
+    };
+
+    // Edge case,support where there is not tax account.
+    if (empty($taxFinanceAccountsCondition)) {
+      $taxFinanceAccountsCondition[] = 0;
+    }
+
+    return implode(',', $taxFinanceAccountsCondition);
   }
 
   /**
@@ -203,10 +237,8 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     $item[self::NOMINAL_AC_REF_LABEL] = $exportResultDao->from_credit_account;
     $item[self::DETAILS_LABEL] = $exportResultDao->contact_display_name . ' - ' . $exportResultDao->item_description;
     $item[self::NET_AMOUNT_LABEL] = $exportResultDao->net_amount;
-    if (!is_null($exportResultDao->line_item_tax_amount)) {
-      $item[self::TAX_CODE_LABEL] = $this->getFinancialIemLinesTaxCodeByFinancialID($exportResultDao->line_item_financial_type_id);
-      $item[self::TAX_AMOUNT_LABEL] = $this->calculateTaxAmount($exportResultDao->net_amount, $exportResultDao->line_item_financial_type_id);
-    }
+    $item[self::TAX_CODE_LABEL] = $this->getFinancialIemLinesTaxCodeByFinancialID($exportResultDao->line_item_financial_type_id);
+    $item[self::TAX_AMOUNT_LABEL] = $exportResultDao->tax_amount;
 
     return $item;
   }
@@ -239,24 +271,6 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     $this->financialTypeTaxCodeMap[$financialTypeID] = $taxCode;
 
     return $taxCode;
-  }
-
-  private function calculateTaxAmount($amount, $financialTypeID) {
-    $taxRate = $this->getTaxRateForFinancialType($financialTypeID);
-    $taxAmount = 0;
-    if (empty($taxRate)) {
-      return $taxAmount;
-    }
-
-    return ($taxRate / 100) * $amount;
-  }
-
-  private function getTaxRateForFinancialType($financialTypeID) {
-    $taxRates = CRM_Core_PseudoConstant::getTaxRates();
-    return round(
-      CRM_Utils_Array::value($financialTypeID, $taxRates, 0),
-      2
-    );
   }
 
   /**
