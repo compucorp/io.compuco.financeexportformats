@@ -122,7 +122,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
       $taxFinanceAccountsCondition[] = $financialAccount['id'];
     };
 
-    // Edge case,support where there is not tax account.
+    // Edge case, support where there is no tax account.
     if (empty($taxFinanceAccountsCondition)) {
       $taxFinanceAccountsCondition[] = 0;
     }
