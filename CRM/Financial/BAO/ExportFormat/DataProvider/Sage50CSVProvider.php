@@ -93,7 +93,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
                                                       AND eftii.entity_id <> fi.id and ft.is_payment = 0) AND (fii.financial_account_id IN ($taxAccounts)))
              LEFT JOIN civicrm_line_item li ON (li.id = fi.entity_id AND fi.entity_table = 'civicrm_line_item')
              LEFT JOIN civicrm_financial_account fac ON fac.id = fi.financial_account_id
-    WHERE eb.batch_id = %1";
+    WHERE eb.batch_id = %1 AND fi.financial_account_id NOT IN ($taxAccounts)";
 
     CRM_Utils_Hook::batchQuery($sql);
 
@@ -157,11 +157,6 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
         self::PROJECT_REFN_LABEL => NULL,
         self::COST_CODE_REFN_LABEL => NULL,
       ];
-
-      // Ignore tax line item
-      if ($this->isFromCreditAccountTaxAccount($exportResultDao->from_credit_account)) {
-        continue;
-      }
 
       $formattedItem = NULL;
       if ($exportResultDao->is_payment == 1) {
@@ -271,35 +266,6 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     $this->financialTypeTaxCodeMap[$financialTypeID] = $taxCode;
 
     return $taxCode;
-  }
-
-  /**
-   * Checks if account code is a tax account.
-   */
-  private function isFromCreditAccountTaxAccount($accountCode) {
-    if (isset($this->fromCreditAccountTaxMap[$accountCode])) {
-      //return value if we have visited it before.
-      return $this->fromCreditAccountTaxMap[$accountCode];
-    }
-
-    $fa = civicrm_api3('FinancialAccount', 'get', [
-      'sequential' => 1,
-      'accounting_code' => $accountCode,
-    ]);
-
-    if ($fa['count'] == 0) {
-      return FALSE;
-    }
-
-    if ($fa['values'][0]['is_tax']) {
-      $this->fromCreditAccountTaxMap[$accountCode] = TRUE;
-
-      return TRUE;
-    }
-
-    $this->fromCreditAccountTaxMap[$accountCode] = FALSE;
-
-    return FALSE;
   }
 
   /**

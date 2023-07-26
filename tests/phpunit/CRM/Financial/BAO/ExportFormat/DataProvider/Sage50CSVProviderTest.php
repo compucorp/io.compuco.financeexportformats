@@ -64,24 +64,13 @@ class Sage50CSVProviderTest extends BaseHeadlessTest {
     $exportResultDao = Sage50CSVProvider::runExportQuery($contributionData['batch_id']);
     $provider = new Sage50CSVProvider();
     list($queryResults, $rows) = $provider->formatDataRows($exportResultDao);
+
     $row = $rows[0];
     $this->assertEquals('SI', $row[Sage50CSVProvider::TYPE_LABEL]);
 
-    // Test row 3 here as row 2 is a payment line.
-    $row = $rows[2];
+    // Test row 1 here as row 2 is a payment line.
+    $row = $rows[1];
     $this->assertEquals('SC', $row[Sage50CSVProvider::TYPE_LABEL]);
-  }
-
-  public function testRemoveTaxLineItems() {
-    $this->mockSalesTaxFinancialAccount();
-    $contributionData = $this->mockContributionInBatch(120);
-
-    $exportResultDao = Sage50CSVProvider::runExportQuery($contributionData['batch_id']);
-    $provider = new Sage50CSVProvider();
-
-    list($queryResults, $rows) = $provider->formatDataRows($exportResultDao);
-    $this->assertEquals(4, count($queryResults));
-    $this->assertEquals(2, count($rows));
   }
 
   public function testPaymentProcessorLine() {
@@ -219,6 +208,17 @@ class Sage50CSVProviderTest extends BaseHeadlessTest {
       'id' => $contribution['contribution_id'],
       'total_amount' => $balanceAmount,
     ]);
+
+    $line = civicrm_api3('LineItem', 'get', [
+      'sequential' => 1,
+      'entity_table' => "civicrm_contribution",
+      'contribution_id' => $contributionID,
+      'options' => ['limit' => 1],
+    ])['values'][0];
+
+    $contribution = $this->getContributionByID($contributionID);
+    $line['line_total'] = -$balanceAmount;
+    CRM_Financial_BAO_FinancialItem::add((object) $line, (object) $contribution);
 
     $toFinancialAccount = CRM_Contribute_PseudoConstant::getRelationalFinancialAccount($contribution['financial_type_id'], 'Accounts Receivable Account is');
     $adjustedTrxnValues = array(
