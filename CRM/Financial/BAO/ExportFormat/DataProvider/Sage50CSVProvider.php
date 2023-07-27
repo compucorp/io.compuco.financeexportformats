@@ -73,7 +73,8 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
       fii.amount as tax_amount,
       eftc.id as civicrm_entity_financial_trxn_id,
       li.label as item_description,
-      li.financial_type_id as line_item_financial_type_id,
+      li.financial_type_id as financial_type_id,
+      fty.name as financial_type,
       ov.label as department_code
     FROM civicrm_entity_batch eb
              LEFT JOIN civicrm_financial_trxn ft ON (eb.entity_id = ft.id AND eb.entity_table = 'civicrm_financial_trxn')
@@ -94,6 +95,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
                                                       AND eftii.entity_id <> fi.id and ft.is_payment = 0) AND (fii.financial_account_id IN ($taxAccounts)))
              LEFT JOIN civicrm_line_item li ON (li.id = fi.entity_id AND fi.entity_table = 'civicrm_line_item')
              LEFT JOIN civicrm_financial_account fac ON fac.id = fi.financial_account_id
+             LEFT JOIN civicrm_financial_type fty ON li.financial_type_id = fty.id
              LEFT JOIN civicrm_value_financeexports_financial_codes vfc ON c.id = vfc.entity_id
              LEFT JOIN civicrm_option_value ov ON (vfc.financial_department_code = ov.value AND ov.option_group_id = (SELECT id FROM civicrm_option_group og WHERE og.name = 'financial_department_code'))
     WHERE eb.batch_id = %1 AND fi.financial_account_id NOT IN ($taxAccounts)";
@@ -157,7 +159,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
         self::EXCHANGE_RATE_LABEL => NULL,
         self::EXTRA_REFERENCE => $exportResultDao->civicrm_entity_financial_trxn_id,
         self::USER_NAME_LABEL => NULL,
-        self::PROJECT_REFN_LABEL => NULL,
+        self::PROJECT_REFN_LABEL => $exportResultDao->financial_type,
         self::COST_CODE_REFN_LABEL => NULL,
       ];
 
@@ -235,7 +237,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     $item[self::NOMINAL_AC_REF_LABEL] = $exportResultDao->from_credit_account;
     $item[self::DETAILS_LABEL] = $exportResultDao->contact_display_name . ' - ' . $exportResultDao->item_description;
     $item[self::NET_AMOUNT_LABEL] = $exportResultDao->net_amount;
-    $item[self::TAX_CODE_LABEL] = $this->getFinancialIemLinesTaxCodeByFinancialID($exportResultDao->line_item_financial_type_id);
+    $item[self::TAX_CODE_LABEL] = $this->getFinancialIemLinesTaxCodeByFinancialID($exportResultDao->financial_type_id);
     $item[self::TAX_AMOUNT_LABEL] = $exportResultDao->tax_amount;
 
     return $item;
