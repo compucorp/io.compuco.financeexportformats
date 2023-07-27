@@ -23,5 +23,9 @@
   <civix>
     <namespace>CRM/Financeexportformats</namespace>
     <angularModule>crmFinanceexportformats</angularModule>
+    <format>22.05.2</format>
   </civix>
+  <mixins>
+    <mixin>mgd-php@1.0.0</mixin>
+  </mixins>
 </extension>

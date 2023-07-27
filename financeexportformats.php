@@ -12,15 +12,6 @@ function financeexportformats_civicrm_config(&$config) {
 }
 
 /**
- * Implements hook_civicrm_xmlMenu().
- *
- * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_xmlMenu
- */
-function financeexportformats_civicrm_xmlMenu(&$files) {
-  _financeexportformats_civix_civicrm_xmlMenu($files);
-}
-
-/**
  * Implements hook_civicrm_install().
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_install
@@ -75,50 +66,6 @@ function financeexportformats_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL
 }
 
 /**
- * Implements hook_civicrm_managed().
- *
- * Generate a list of entities to create/deactivate/delete when this module
- * is installed, disabled, uninstalled.
- *
- * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_managed
- */
-function financeexportformats_civicrm_managed(&$entities) {
-  _financeexportformats_civix_civicrm_managed($entities);
-}
-
-/**
- * Implements hook_civicrm_caseTypes().
- *
- * Add CiviCase types provided by this extension.
- *
- * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_caseTypes
- */
-function financeexportformats_civicrm_caseTypes(&$caseTypes) {
-  _financeexportformats_civix_civicrm_caseTypes($caseTypes);
-}
-
-/**
- * Implements hook_civicrm_angularModules().
- *
- * Add Angular modules provided by this extension.
- *
- * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_angularModules
- */
-function financeexportformats_civicrm_angularModules(&$angularModules) {
-  // Auto-add module files from ./ang/*.ang.php
-  _financeexportformats_civix_civicrm_angularModules($angularModules);
-}
-
-/**
- * Implements hook_civicrm_alterSettingsFolders().
- *
- * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_alterSettingsFolders
- */
-function financeexportformats_civicrm_alterSettingsFolders(&$metaDataFolders = NULL) {
-  _financeexportformats_civix_civicrm_alterSettingsFolders($metaDataFolders);
-}
-
-/**
  * Implements hook_civicrm_entityTypes().
  *
  * Declare entity types provided by this module.
@@ -127,13 +74,6 @@ function financeexportformats_civicrm_alterSettingsFolders(&$metaDataFolders = N
  */
 function financeexportformats_civicrm_entityTypes(&$entityTypes) {
   _financeexportformats_civix_civicrm_entityTypes($entityTypes);
-}
-
-/**
- * Implements hook_civicrm_themes().
- */
-function financeexportformats_civicrm_themes(&$themes) {
-  _financeexportformats_civix_civicrm_themes($themes);
 }
 
 function financeexportformats_civicrm_buildForm($formName, &$form) {
