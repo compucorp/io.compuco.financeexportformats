@@ -34,6 +34,17 @@ class CRM_Financeexportformats_Upgrader extends CRM_Financeexportformats_Upgrade
     $this->disableCustomGroups();
   }
 
+  /**
+   * Executes upgrade 1001
+   */
+  public function upgrade_1001() {
+    $this->ctx->log->info('Applying Finance Export formats update 1001');
+    $this->executeCustomDataFile('xml/FinancialCodes_install.xml');
+    CRM_Utils_System::flushCache();
+
+    return TRUE;
+  }
+
   private function removeCustomGroups() {
     $customFields = [
       'financial_department_code',
