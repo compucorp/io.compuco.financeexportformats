@@ -98,7 +98,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
              LEFT JOIN civicrm_financial_type fty ON li.financial_type_id = fty.id
              LEFT JOIN civicrm_value_financeexports_financial_codes vfc ON c.id = vfc.entity_id
              LEFT JOIN civicrm_option_value ov ON (vfc.financial_department_code = ov.value AND ov.option_group_id = (SELECT id FROM civicrm_option_group og WHERE og.name = 'financial_department_code'))
-    WHERE eb.batch_id = %1 AND fi.financial_account_id NOT IN ($taxAccounts)";
+    WHERE eb.batch_id = %1 AND (fi.financial_account_id NOT IN ($taxAccounts) OR fi.financial_account_id IS NULL)";
 
     CRM_Utils_Hook::batchQuery($sql);
 
