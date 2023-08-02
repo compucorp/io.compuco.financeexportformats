@@ -75,6 +75,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
       li.label as item_description,
       li.financial_type_id as financial_type_id,
       fty.name as financial_type,
+      ftyc.name as contribution_financial_type,
       ov.label as department_code
     FROM civicrm_entity_batch eb
              LEFT JOIN civicrm_financial_trxn ft ON (eb.entity_id = ft.id AND eb.entity_table = 'civicrm_financial_trxn')
@@ -96,6 +97,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
              LEFT JOIN civicrm_line_item li ON (li.id = fi.entity_id AND fi.entity_table = 'civicrm_line_item')
              LEFT JOIN civicrm_financial_account fac ON fac.id = fi.financial_account_id
              LEFT JOIN civicrm_financial_type fty ON li.financial_type_id = fty.id
+             LEFT JOIN civicrm_financial_type ftyc ON c.financial_type_id = ftyc.id
              LEFT JOIN civicrm_value_financeexports_financial_codes vfc ON c.id = vfc.entity_id
              LEFT JOIN civicrm_option_value ov ON (vfc.financial_department_code = ov.value AND ov.option_group_id = (SELECT id FROM civicrm_option_group og WHERE og.name = 'financial_department_code'))
     WHERE eb.batch_id = %1 AND (fi.financial_account_id NOT IN ($taxAccounts) OR fi.financial_account_id IS NULL)";
@@ -159,7 +161,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
         self::EXCHANGE_RATE_LABEL => NULL,
         self::EXTRA_REFERENCE => $exportResultDao->civicrm_entity_financial_trxn_id,
         self::USER_NAME_LABEL => NULL,
-        self::PROJECT_REFN_LABEL => $exportResultDao->financial_type,
+        self::PROJECT_REFN_LABEL => $exportResultDao->financial_type ?? $exportResultDao->contribution_financial_type,
         self::COST_CODE_REFN_LABEL => NULL,
       ];
 
@@ -248,6 +250,11 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
       return $this->financialTypeTaxCodeMap[$financialTypeID];
     }
 
+    $taxCode = 'T2';
+    if (is_null($financialTypeID)) {
+      return $taxCode;
+    }
+
     $sql = "SELECT
         efa.id,
         fa.account_type_code
@@ -259,7 +266,6 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     $params = [1 => [$financialTypeID, 'Integer']];
     $dao = CRM_Core_DAO::executeQuery($sql, $params);
 
-    $taxCode = 'T2';
     while ($dao->fetch()) {
       $accountTypeCode = $dao->account_type_code;
       if (!is_null($accountTypeCode)) {
