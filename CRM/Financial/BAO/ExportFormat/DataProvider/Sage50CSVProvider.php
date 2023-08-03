@@ -91,9 +91,14 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
              LEFT JOIN civicrm_financial_item fi ON fi.id = efti.entity_id
              LEFT JOIN civicrm_financial_item fii ON (fii.id = (SELECT eftii.entity_id
                                                     FROM civicrm_entity_financial_trxn eftii
+                                                      INNER JOIN civicrm_financial_item fiii ON fiii.id = eftii.entity_id
                                                     WHERE eftii.financial_trxn_id  = ft.id
-                                                      AND eftii.entity_table = 'civicrm_financial_item'
-                                                      AND eftii.entity_id <> fi.id and ft.is_payment = 0) AND (fii.financial_account_id IN ($taxAccounts)))
+                                                     AND eftii.entity_table = 'civicrm_financial_item'
+                                                     AND eftii.entity_id <> fi.id
+                                                     AND fiii.financial_account_id IN ($taxAccounts)
+                                                     AND ft.is_payment = 0
+                                                     AND fi.entity_id = fiii.entity_id)
+                                                AND (fii.financial_account_id IN ($taxAccounts)))
              LEFT JOIN civicrm_line_item li ON (li.id = fi.entity_id AND fi.entity_table = 'civicrm_line_item')
              LEFT JOIN civicrm_financial_account fac ON fac.id = fi.financial_account_id
              LEFT JOIN civicrm_financial_type fty ON li.financial_type_id = fty.id
