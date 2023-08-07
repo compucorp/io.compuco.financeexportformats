@@ -234,7 +234,17 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
       return NULL;
     }
 
-    if ($exportResultDao->amount >= 0) {
+    $shouldMakeNumberNegative = $exportResultDao->debit_total_amount < 0 && $exportResultDao->net_amount >= 0;
+    if ($shouldMakeNumberNegative) {
+      $netAmount = -$exportResultDao->net_amount;
+      $taxAmount = -$exportResultDao->tax_amount;
+    }
+    else {
+      $netAmount = $exportResultDao->net_amount;
+      $taxAmount = $exportResultDao->tax_amount;
+    }
+
+    if ($netAmount >= 0) {
       $item[self::TYPE_LABEL] = 'SI';
     }
     else {
@@ -243,9 +253,9 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
 
     $item[self::NOMINAL_AC_REF_LABEL] = $exportResultDao->from_credit_account;
     $item[self::DETAILS_LABEL] = $exportResultDao->contact_display_name . ' - ' . $exportResultDao->item_description;
-    $item[self::NET_AMOUNT_LABEL] = $exportResultDao->net_amount;
+    $item[self::NET_AMOUNT_LABEL] = $netAmount;
     $item[self::TAX_CODE_LABEL] = $this->getFinancialIemLinesTaxCodeByFinancialID($exportResultDao->financial_type_id);
-    $item[self::TAX_AMOUNT_LABEL] = $exportResultDao->tax_amount;
+    $item[self::TAX_AMOUNT_LABEL] = $taxAmount;
 
     return $item;
   }
