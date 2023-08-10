@@ -71,6 +71,8 @@ class Sage50CSVProviderTest extends BaseHeadlessTest {
     // Test row 1 here as row 2 is a payment line.
     $row = $rows[1];
     $this->assertEquals('SC', $row[Sage50CSVProvider::TYPE_LABEL]);
+    $this->assertTrue($row[Sage50CSVProvider::NET_AMOUNT_LABEL] >= 0);
+    $this->assertTrue($row[Sage50CSVProvider::TAX_AMOUNT_LABEL] >= 0);
   }
 
   public function testPaymentProcessorLine() {
