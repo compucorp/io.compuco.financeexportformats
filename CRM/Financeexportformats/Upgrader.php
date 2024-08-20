@@ -3,7 +3,7 @@
 /**
  * Collection of upgrade steps.
  */
-class CRM_Financeexportformats_Upgrader extends CRM_Financeexportformats_Upgrader_Base {
+class CRM_Financeexportformats_Upgrader extends CRM_Extension_Upgrader_Base {
 
   const FINANCIAL_CODES = 'financial_codes';
 
