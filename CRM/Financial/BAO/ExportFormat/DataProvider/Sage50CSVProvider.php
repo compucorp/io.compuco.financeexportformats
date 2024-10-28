@@ -42,6 +42,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
    */
   public static function runExportQuery($batchId) {
     $taxAccounts = self::generatTaxAccountCondition();
+    $supportCreditNote = self::shouldSupportCreditNote();
 
     $sql = "SELECT
       c.id as contribution_id,
@@ -73,7 +74,11 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
       fii.amount as tax_amount,
       eftc.id as civicrm_entity_financial_trxn_id,
       li.label as item_description,
-      li.financial_type_id as financial_type_id,
+      " . ($supportCreditNote ? "CASE
+        WHEN li.financial_type_id IS NOT NULL
+        THEN li.financial_type_id
+        ELSE fcli.financial_type_id
+      END" : "li.financial_type_id") . " as financial_type_id,     
       fty.name as financial_type,
       ftyc.name as contribution_financial_type,
       ov.label as department_code
@@ -100,6 +105,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
                                                      AND fi.entity_id = fiii.entity_id)
                                                 AND (fii.financial_account_id IN ($taxAccounts)))
              LEFT JOIN civicrm_line_item li ON (li.id = fi.entity_id AND fi.entity_table = 'civicrm_line_item')
+             " . ($supportCreditNote ? "LEFT JOIN financeextras_credit_note_line fcli ON (fcli.id = fi.entity_id AND fi.entity_table = 'financeextras_credit_note_line')" : "") . "
              LEFT JOIN civicrm_financial_account fac ON fac.id = fi.financial_account_id
              LEFT JOIN civicrm_financial_type fty ON li.financial_type_id = fty.id
              LEFT JOIN civicrm_financial_type ftyc ON c.financial_type_id = ftyc.id
@@ -306,6 +312,12 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
 
   private function getFinancialAccountTypeIdByName($name) {
     return key(CRM_Core_PseudoConstant::accountOptionValues('financial_account_type', NULL, " AND v.name LIKE '{$name}' "));
+  }
+
+  private static function shouldSupportCreditNote() {
+    $extensionInstalled = 'installed' ===
+    CRM_Extension_System::singleton()->getManager()->getStatus('io.compuco.financeextras');
+    return $extensionInstalled;
   }
 
 }
