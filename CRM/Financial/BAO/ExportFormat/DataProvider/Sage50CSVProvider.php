@@ -171,7 +171,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
         self::DETAILS_LABEL => NULL,
         self::NET_AMOUNT_LABEL => NULL,
         self::TAX_CODE_LABEL => NULL,
-        self::TAX_AMOUNT_LABEL => NULL,
+        self::TAX_AMOUNT_LABEL => 0,
         self::EXCHANGE_RATE_LABEL => NULL,
         self::EXTRA_REFERENCE => $exportResultDao->civicrm_entity_financial_trxn_id,
         self::USER_NAME_LABEL => NULL,
@@ -196,6 +196,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
         }
       }
 
+      $formattedItem[self::TAX_AMOUNT_LABEL] = number_format((float) $formattedItem[self::TAX_AMOUNT_LABEL], 2, '.', '');
       $financialItems[] = $formattedItem;
       end($financialItems);
     }
