@@ -230,7 +230,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     $item[self::NOMINAL_AC_REF_LABEL] = $exportResultDao->to_account_code;
     $paymentMethod = is_null($exportResultDao->payment_processor_id) ? $exportResultDao->payment_method : $exportResultDao->payment_processor_name;
     $item[self::DETAILS_LABEL] = "$paymentMethod - $exportResultDao->trxn_id";
-    $item[self::NET_AMOUNT_LABEL] = $exportResultDao->debit_total_amount;
+    $item[self::NET_AMOUNT_LABEL] = abs($exportResultDao->debit_total_amount);
     $item[self::TAX_CODE_LABEL] = $exportResultDao->to_account_type_code;
 
     $this->paymentLineMap[$exportResultDao->civicrm_entity_financial_trxn_id] = TRUE;
