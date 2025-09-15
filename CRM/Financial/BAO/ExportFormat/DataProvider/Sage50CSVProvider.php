@@ -72,7 +72,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
       fac.name AS from_credit_account_name,
       fi.amount as net_amount,
       fii.amount as tax_amount,
-      eftc.id as civicrm_entity_financial_trxn_id,
+      COALESCE(eftc.id," . ($supportCreditNote ? "efta.id" : "''") . ") AS civicrm_entity_financial_trxn_id,
       li.label as item_description,
       " . ($supportCreditNote ? "CASE
         WHEN li.financial_type_id IS NOT NULL
@@ -81,7 +81,13 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
       END" : "li.financial_type_id") . " as financial_type_id,
       fty.name as financial_type,
       ftyc.name as contribution_financial_type,
-      ov.label as department_code
+      ov.label as department_code,"
+      . ($supportCreditNote ? "fcla.id" : "''") . " AS allocation_id,"
+      . ($supportCreditNote ? "fcna.cn_number" : "''") . " AS allocation_credit_note_number,"
+      . ($supportCreditNote ? "fcca.name" : "''") . " AS allocation_contribution_financial_type,"
+      . ($supportCreditNote ? "fcn.cn_number" : "''") . " AS credit_note_number,"
+      . ($supportCreditNote ? "fcli.description" : "''") . " AS credit_note_description,"
+      . ($supportCreditNote ? "ftycn.name" : "''") . " AS credit_note_financial_type
     FROM civicrm_entity_batch eb
              LEFT JOIN civicrm_financial_trxn ft ON (eb.entity_id = ft.id AND eb.entity_table = 'civicrm_financial_trxn')
              LEFT JOIN civicrm_payment_processor pp ON (ft.payment_processor_id = pp.id)
@@ -105,7 +111,16 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
                                                      AND fi.entity_id = fiii.entity_id ORDER BY fiii.id DESC LIMIT 1)
                                                 AND (fii.financial_account_id IN ($taxAccounts)))
              LEFT JOIN civicrm_line_item li ON (li.id = fi.entity_id AND fi.entity_table = 'civicrm_line_item')
-             " . ($supportCreditNote ? "LEFT JOIN financeextras_credit_note_line fcli ON (fcli.id = fi.entity_id AND fi.entity_table = 'financeextras_credit_note_line')" : "") . "
+             " . ($supportCreditNote ?
+        "LEFT JOIN financeextras_credit_note_line fcli ON (fcli.id = fi.entity_id AND fi.entity_table = 'financeextras_credit_note_line')
+        LEFT JOIN civicrm_entity_financial_trxn efta ON (efta.financial_trxn_id  = ft.id AND efta.entity_table = 'financeextras_credit_note_allocation')
+        LEFT JOIN financeextras_credit_note_allocation fcla ON (fcla.id = efta.entity_id)
+        LEFT JOIN financeextras_credit_note fcna ON (fcla.credit_note_id = fcna.id)
+        LEFT JOIN civicrm_contribution cca ON (fcla.contribution_id = cca.id)
+        LEFT JOIN civicrm_financial_type fcca ON (cca.financial_type_id = fcca.id)
+        LEFT JOIN financeextras_credit_note fcn ON (fcli.credit_note_id = fcn.id)
+        LEFT JOIN civicrm_financial_type ftycn ON fcli.financial_type_id = ftycn.id"
+        : "") . "
              LEFT JOIN civicrm_financial_account fac ON fac.id = fi.financial_account_id
              LEFT JOIN civicrm_financial_type fty ON li.financial_type_id = fty.id
              LEFT JOIN civicrm_financial_type ftyc ON c.financial_type_id = ftyc.id
@@ -168,7 +183,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
         self::DETAILS_LABEL => NULL,
         self::NET_AMOUNT_LABEL => NULL,
         self::TAX_CODE_LABEL => NULL,
-        self::TAX_AMOUNT_LABEL => NULL,
+        self::TAX_AMOUNT_LABEL => 0,
         self::EXCHANGE_RATE_LABEL => NULL,
         self::EXTRA_REFERENCE => $exportResultDao->civicrm_entity_financial_trxn_id,
         self::USER_NAME_LABEL => NULL,
@@ -193,6 +208,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
         }
       }
 
+      $formattedItem[self::TAX_AMOUNT_LABEL] = number_format((float) $formattedItem[self::TAX_AMOUNT_LABEL], 2, '.', '');
       $financialItems[] = $formattedItem;
       end($financialItems);
     }
@@ -218,15 +234,27 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
 
     if ($exportResultDao->debit_total_amount >= 0) {
       $item[self::TYPE_LABEL] = 'SA';
+      if ($exportResultDao->allocation_id) {
+        $item[self::TYPE_LABEL] = 'JC';
+        $item[self::PROJECT_REFN_LABEL] = $exportResultDao->allocation_contribution_financial_type;
+        if (empty($item[self::REFERENCE_LABEL])) {
+          $item[self::REFERENCE_LABEL] = $exportResultDao->allocation_credit_note_number;
+        }
+      }
     }
     else {
       $item[self::TYPE_LABEL] = 'SP';
+      if ($exportResultDao->allocation_id) {
+        $item[self::TYPE_LABEL] = 'JD';
+        $item[self::PROJECT_REFN_LABEL] = $exportResultDao->allocation_contribution_financial_type;
+        $item[self::REFERENCE_LABEL] = $exportResultDao->allocation_credit_note_number;
+      }
     }
 
     $item[self::NOMINAL_AC_REF_LABEL] = $exportResultDao->to_account_code;
     $paymentMethod = is_null($exportResultDao->payment_processor_id) ? $exportResultDao->payment_method : $exportResultDao->payment_processor_name;
     $item[self::DETAILS_LABEL] = "$paymentMethod - $exportResultDao->trxn_id";
-    $item[self::NET_AMOUNT_LABEL] = $exportResultDao->debit_total_amount;
+    $item[self::NET_AMOUNT_LABEL] = abs($exportResultDao->debit_total_amount);
     $item[self::TAX_CODE_LABEL] = $exportResultDao->to_account_type_code;
 
     $this->paymentLineMap[$exportResultDao->civicrm_entity_financial_trxn_id] = TRUE;
@@ -249,7 +277,12 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
     }
 
     $item[self::NOMINAL_AC_REF_LABEL] = $exportResultDao->from_credit_account;
-    $item[self::DETAILS_LABEL] = $exportResultDao->contact_display_name . ' - ' . $exportResultDao->item_description;
+    $item[self::DETAILS_LABEL] = !empty($exportResultDao->credit_note_description) ? $exportResultDao->credit_note_description
+      : $exportResultDao->contact_display_name . ' - ' . $exportResultDao->item_description;
+    $item[self::REFERENCE_LABEL] = !empty($exportResultDao->credit_note_number) ? $exportResultDao->credit_note_number
+      : $item[self::REFERENCE_LABEL];
+    $item[self::PROJECT_REFN_LABEL] = !empty($exportResultDao->credit_note_financial_type) ? $exportResultDao->credit_note_financial_type
+      : $item[self::PROJECT_REFN_LABEL];
     $item[self::NET_AMOUNT_LABEL] = abs($exportResultDao->net_amount);
     $item[self::TAX_CODE_LABEL] = $this->getFinancialIemLinesTaxCodeByFinancialID($exportResultDao->financial_type_id);
     $item[self::TAX_AMOUNT_LABEL] = abs($exportResultDao->tax_amount);

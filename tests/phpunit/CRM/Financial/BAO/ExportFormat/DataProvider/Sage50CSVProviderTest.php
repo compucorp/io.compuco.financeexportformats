@@ -114,7 +114,7 @@ class Sage50CSVProviderTest extends BaseHeadlessTest {
     $row = $rows[2];
     $this->assertEquals('SP', $row[Sage50CSVProvider::TYPE_LABEL]);
     $this->assertEquals($queryResult['payment_processor_name'] . ' - ' . $queryResult['trxn_id'], $row[Sage50CSVProvider::DETAILS_LABEL]);
-    $this->assertEquals(-50, $row[Sage50CSVProvider::NET_AMOUNT_LABEL]);
+    $this->assertEquals(50, $row[Sage50CSVProvider::NET_AMOUNT_LABEL]);
   }
 
   public function testManuallyAddedPaymentLine() {
