@@ -48,7 +48,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProvider {
       LEFT JOIN civicrm_entity_financial_trxn efti ON (efti.financial_trxn_id  = ft.id AND efti.entity_table = 'civicrm_financial_item')
       LEFT JOIN civicrm_financial_item fi ON fi.id = efti.entity_id
       LEFT JOIN civicrm_financial_account fac ON fac.id = fi.financial_account_id
-      WHERE eb.batch_id = ( %1 )";
+      WHERE (eftc.id IS NOT NULL OR efti.id IS NOT NULL) AND eb.batch_id = ( %1 )";
 
     CRM_Utils_Hook::batchQuery($sql);
 
