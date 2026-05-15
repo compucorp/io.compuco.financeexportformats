@@ -73,10 +73,10 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProvider {
    *   CRM_Utils_Hook::batchItems hook.
    */
   public static function formatDataRows($exportResultDao) {
-    $prefixValue = Civi::settings()->get('contribution_invoice_settings');
     $financialAccountsOwners = self::getAllFinancialAccountsOwnersIdNameMapping();
 
     $financialItems = $queryResults = [];
+    $invoicePrefix = Civi::settings()->get('invoice_prefix');
 
     while ($exportResultDao->fetch()) {
       if ($exportResultDao->credit_account) {
@@ -88,7 +88,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProvider {
         $creditAccountContactId = $exportResultDao->from_credit_account_contact_id;
       }
 
-      $invoiceNo = CRM_Utils_Array::value('invoice_prefix', $prefixValue) . "" . $exportResultDao->contribution_id;
+      $invoiceNo = $invoicePrefix . $exportResultDao->contribution_id;
 
       $financialTypeName = '';
       if (property_exists($exportResultDao, 'financial_type_id') && !empty($exportResultDao->financial_type_id)) {
