@@ -41,8 +41,7 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_QuickbooksCSVProviderTest exte
   public function testMemoColumnEqualsInvoiceNumber() {
     $data = $this->createTestContributionAndGenerateBatchRows();
 
-    $prefixValue = Civi::settings()->get('contribution_invoice_settings');
-    $invoiceNumber = CRM_Utils_Array::value('invoice_prefix', $prefixValue) . "" . $data['contribution_data']['contribution_id'];
+    $invoiceNumber = Civi::settings()->get('invoice_prefix') . "" . $data['contribution_data']['contribution_id'];
 
     $this->assertEquals($data['batch_rows'][0]['Memo'], $invoiceNumber);
     $this->assertEquals($data['batch_rows'][1]['Memo'], $invoiceNumber);
