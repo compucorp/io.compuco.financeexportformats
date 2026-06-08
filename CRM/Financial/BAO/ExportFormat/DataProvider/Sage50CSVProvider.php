@@ -18,17 +18,13 @@ class CRM_Financial_BAO_ExportFormat_DataProvider_Sage50CSVProvider {
         PROJECT_REFN_LABEL = 'Project Refn',
         COST_CODE_REFN_LABEL = 'Cost Code Refn';
 
-  private $invoicePrefixValue;
   private $financialTypeTaxCodeMap;
-  private $fromCreditAccountTaxMap;
   private $expensesFinancialTypeId;
   private $expensesFinancialAccounts;
   private $paymentLineMap;
 
   public function __construct() {
-    $this->invoicePrefixValue = Civi::settings()->get('contribution_invoice_settings');
     $this->financialTypeTaxCodeMap = [];
-    $this->fromCreditAccountTaxMap = [];
     $this->expensesFinancialTypeId = $this->getFinancialAccountTypeIdByName('Expenses');
     $this->expensesFinancialAccounts = [];
     $this->paymentLineMap = [];
